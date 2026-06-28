@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ROI Tracker Pro - Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <div id="configOverlay">
+    <div class="modal">
+      <h2 style="margin-bottom: 20px;">Configurações</h2>
+      <div class="input-group" style="margin-bottom: 12px;">
+        <label>Banca Inicial (€)</label>
+        <input id="bancaInicial" type="number" placeholder="Ex: 100">
+      </div>
+      <div class="input-group" style="margin-bottom: 12px;">
+        <label>Meta de Banca (€)</label>
+        <input id="metaBanca" type="number" value="10000">
+      </div>
+      <div class="input-group" style="margin-bottom: 20px;">
+        <label>ROI Diário Esperado (%)</label>
+        <input id="roiMeta" type="number" value="5">
+      </div>
+      <button class="btn-primary" onclick="guardarConfig()" style="width: 100%;">Guardar e Aplicar</button>
+      <button class="btn-outline" onclick="exportarCSV()" style="width: 100%; margin-top: 8px;">📥 Exportar Backup</button>
+      <button onclick="resetTotal()" style="background: var(--danger); color: white; width: 100%; margin-top: 24px; font-size: 0.7rem;">⚠️ RESET TOTAL</button>
+      <button class="btn-outline" onclick="toggleConfig()" style="width: 100%; margin-top: 8px;">Fechar</button>
+    </div>
+  </div>
+
+  <div id="loginOverlay" style="display:none; place-items:center; position:fixed; inset:0; background: rgba(0,0,0,0.8); z-index:200;">
+    <div class="modal" style="width:360px;">
+      <h2 style="margin-bottom: 12px;">Entrar na Conta</h2>
+      <div class="input-group">
+        <label>Utilizador</label>
+        <input id="loginUser" type="text" placeholder="username">
+      </div>
+      <div class="input-group">
+        <label>Senha</label>
+        <input id="loginPass" type="password" placeholder="password">
+      </div>
+      <div id="loginMsg" class="note" style="margin-top:10px; display:none; color: var(--danger);"></div>
+      <div style="display:flex; gap:8px; margin-top:12px;">
+        <button class="btn-primary" onclick="login()" style="flex:1">Entrar</button>
+        <button class="btn-outline" onclick="showRegister()" style="flex:1">Criar Conta</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="registerOverlay" style="display:none; place-items:center; position:fixed; inset:0; background: rgba(0,0,0,0.8); z-index:200;">
+    <div class="modal" style="width:360px;">
+      <h2 style="margin-bottom: 12px;">Criar Conta Nova</h2>
+      <div class="input-group">
+        <label>Utilizador</label>
+        <input id="registerUser" type="text" placeholder="username (3-30 chars)">
+      </div>
+      <div class="input-group">
+        <label>Senha</label>
+        <input id="registerPass" type="password" placeholder="password (8+ chars, maiúscula, minúscula, dígito, símbolo)">
+      </div>
+      <div class="input-group">
+        <label>Confirme a Senha</label>
+        <input id="registerPassConfirm" type="password" placeholder="confirm password">
+      </div>
+      <div id="registerMsg" class="note" style="margin-top:10px; display:none; color: var(--danger);"></div>
+      <div style="display:flex; gap:8px; margin-top:12px;">
+        <button class="btn-primary" onclick="registerUser()" style="flex:1">Criar</button>
+        <button class="btn-outline" onclick="showLogin()" style="flex:1">Voltar</button>
+      </div>
+    </div>
+  </div>
+
+  <aside>
+    <h1>📊 ROI Tracker</h1>
+    
+    <div class="input-group">
+      <label>Registo de Hoje</label>
+      <input id="bancaAtual" type="number" placeholder="Saldo (€)">
+    </div>
+    
+    <button id="btnRegistar" class="btn-primary" onclick="registarDia()">Registar Saldo</button>
+    <button id="btnFecharDia" class="btn-lock" onclick="fecharDia()" style="display: none;">🔒 Fechar Dia</button>
+    
+    <div id="msgBloqueio" style="display:none; color: var(--warning); font-size: 0.8rem; text-align: center; border: 1px dashed var(--warning); padding: 10px; border-radius: 8px;">
+      Mercado fechado. Até amanhã!
+    </div>
+
+    <div style="margin-top: auto;">
+      <button class="btn-outline" onclick="toggleConfig()" style="width: 100%;">⚙️ Configurações</button>
+    </div>
+  </aside>
+
+  <main>
+    <div class="top-bar">
+      <div class="stat-card">
+        <label>Banca Atual</label>
+        <span id="saldoAtual" class="val">—</span>
+        <div class="progress-wrapper">
+          <div class="progress-bg"><div id="progressBar" class="progress-fill"></div></div>
+          <div id="percConcluido" class="note" style="text-align: right; margin-top: 5px;">0% concluído</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <label>ROI Hoje</label>
+        <span id="roiDia" class="val">—</span>
+        <div id="faltaHoje" class="note">A aguardar registo...</div>
+      </div>
+      <div class="stat-card">
+        <label>Crescimento Total</label>
+        <span id="crescimentoTotal" class="val">—</span>
+        <div id="notaObjetivo" class="note">—</div>
+      </div>
+      <div class="stat-card">
+        <label>Projeção Final</label>
+        <span id="previsaoDias" class="val" style="font-size: 1.1rem; line-height: 1.5; padding-top: 5px;">—</span>
+        <div id="alvoAmanha" class="note">A calcular...</div>
+      </div>
+    </div>
+
+    <div class="dashboard-grid">
+      <div class="chart-container">
+        <label style="margin-bottom: 15px; display: block;">Evolução vs Projeção (5 dias)</label>
+        <div style="flex: 1; position: relative;">
+          <canvas id="grafico"></canvas>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
