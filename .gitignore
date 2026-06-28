@@ -3,3 +3,5 @@ node_modules
 *.sqlite
 .env.local
 find_auth*.js
+
+.api-token
