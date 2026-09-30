@@ -1,135 +1,629 @@
 <!DOCTYPE html>
-<html lang="pt-PT">
+<html lang="pt-PT" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ROI Tracker Pro - Dashboard</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <link rel="stylesheet" href="css/style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Dashboard de gestão de banca: ROI diário, drawdown, análise de apostas, gestão de risco e projeções Monte Carlo." />
+  <meta name="color-scheme" content="dark light" />
+  <title>ROI Tracker</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>" />
 </head>
 <body>
 
-  <div id="configOverlay">
-    <div class="modal">
-      <h2 style="margin-bottom: 20px;">Configurações</h2>
-      <div class="input-group" style="margin-bottom: 12px;">
-        <label>Banca Inicial (€)</label>
-        <input id="bancaInicial" type="number" placeholder="Ex: 100">
-      </div>
-      <div class="input-group" style="margin-bottom: 12px;">
-        <label>Meta de Banca (€)</label>
-        <input id="metaBanca" type="number" value="10000">
-      </div>
-      <div class="input-group" style="margin-bottom: 20px;">
-        <label>ROI Diário Esperado (%)</label>
-        <input id="roiMeta" type="number" value="5">
-      </div>
-      <button class="btn-primary" onclick="guardarConfig()" style="width: 100%;">Guardar e Aplicar</button>
-      <button class="btn-outline" onclick="exportarCSV()" style="width: 100%; margin-top: 8px;">📥 Exportar Backup</button>
-      <button onclick="resetTotal()" style="background: var(--danger); color: white; width: 100%; margin-top: 24px; font-size: 0.7rem;">⚠️ RESET TOTAL</button>
-      <button class="btn-outline" onclick="toggleConfig()" style="width: 100%; margin-top: 8px;">Fechar</button>
+<!-- ======================= barra lateral ======================= -->
+<aside class="sidebar">
+  <div class="brand"><span class="dot"></span> ROI Tracker</div>
+
+  <!-- Registo rápido: a ação mais frequente fica sempre à mão. -->
+  <div class="sidebar-section">
+    <div class="field">
+      <label for="inputSaldo">Saldo de hoje</label>
+      <input id="inputSaldo" type="number" step="0.01" min="0" inputmode="decimal" placeholder="0,00 €" />
     </div>
+    <div class="btn-row" style="margin-top: 10px">
+      <button id="btnRegistar" class="btn-primary btn-full">Registar saldo</button>
+    </div>
+    <div class="btn-row" style="margin-top: 8px">
+      <button id="btnFecharDia" class="btn-warn btn-full hidden">🔒 Fechar dia</button>
+    </div>
+    <p id="estadoHoje" class="help" style="margin-top: 10px"></p>
   </div>
 
-  <div id="loginOverlay" style="display:none; place-items:center; position:fixed; inset:0; background: rgba(0,0,0,0.8); z-index:200;">
-    <div class="modal" style="width:360px;">
-      <h2 style="margin-bottom: 12px;">Entrar na Conta</h2>
-      <div class="input-group">
-        <label>Utilizador</label>
-        <input id="loginUser" type="text" placeholder="username">
-      </div>
-      <div class="input-group">
-        <label>Senha</label>
-        <input id="loginPass" type="password" placeholder="password">
-      </div>
-      <div id="loginMsg" class="note" style="margin-top:10px; display:none; color: var(--danger);"></div>
-      <div style="display:flex; gap:8px; margin-top:12px;">
-        <button class="btn-primary" onclick="login()" style="flex:1">Entrar</button>
-        <button class="btn-outline" onclick="showRegister()" style="flex:1">Criar Conta</button>
-      </div>
+  <nav class="nav sidebar-section" aria-label="Secções">
+    <button data-vista="resumo" aria-current="page"><span class="nav-icon">◧</span> Visão geral</button>
+    <button data-vista="registos"><span class="nav-icon">▤</span> Registos</button>
+    <button data-vista="apostas"><span class="nav-icon">◎</span> Apostas</button>
+    <button data-vista="analise"><span class="nav-icon">◩</span> Análise</button>
+    <button data-vista="risco"><span class="nav-icon">△</span> Risco</button>
+    <button data-vista="metas"><span class="nav-icon">◈</span> Metas</button>
+    <button data-vista="definicoes"><span class="nav-icon">⚙</span> Definições</button>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="user-chip">
+      <span class="avatar" id="avatar">?</span>
+      <span>
+        <strong id="nomeUtilizador">Modo local</strong><br />
+        <span class="help" id="modoArmazenamento">só neste dispositivo</span>
+      </span>
+    </div>
+    <div class="btn-row">
+      <button id="btnTema" class="btn-icon" title="Alternar tema claro/escuro">◐ Tema</button>
+      <button id="btnSessao" class="btn-icon">Entrar</button>
     </div>
   </div>
+</aside>
 
-  <div id="registerOverlay" style="display:none; place-items:center; position:fixed; inset:0; background: rgba(0,0,0,0.8); z-index:200;">
-    <div class="modal" style="width:360px;">
-      <h2 style="margin-bottom: 12px;">Criar Conta Nova</h2>
-      <div class="input-group">
-        <label>Utilizador</label>
-        <input id="registerUser" type="text" placeholder="username (3-30 chars)">
-      </div>
-      <div class="input-group">
-        <label>Senha</label>
-        <input id="registerPass" type="password" placeholder="password (8+ chars, maiúscula, minúscula, dígito, símbolo)">
-      </div>
-      <div class="input-group">
-        <label>Confirme a Senha</label>
-        <input id="registerPassConfirm" type="password" placeholder="confirm password">
-      </div>
-      <div id="registerMsg" class="note" style="margin-top:10px; display:none; color: var(--danger);"></div>
-      <div style="display:flex; gap:8px; margin-top:12px;">
-        <button class="btn-primary" onclick="registerUser()" style="flex:1">Criar</button>
-        <button class="btn-outline" onclick="showLogin()" style="flex:1">Voltar</button>
+<!-- ========================== conteúdo ========================== -->
+<main class="content">
+  <header class="content-header">
+    <div>
+      <h2 id="tituloVista">Visão geral</h2>
+      <p class="subtitle" id="subtituloVista">—</p>
+    </div>
+    <!-- Um só conjunto de filtros, acima de tudo o que ele afeta. -->
+    <div class="filter-row" id="filtroPeriodo">
+      <div class="segmented" role="group" aria-label="Período">
+        <button data-periodo="7">7 d</button>
+        <button data-periodo="30">30 d</button>
+        <button data-periodo="90">90 d</button>
+        <button data-periodo="0" aria-pressed="true">Tudo</button>
       </div>
     </div>
-  </div>
+  </header>
 
-  <aside>
-    <h1>📊 ROI Tracker</h1>
-    
-    <div class="input-group">
-      <label>Registo de Hoje</label>
-      <input id="bancaAtual" type="number" placeholder="Saldo (€)">
-    </div>
-    
-    <button id="btnRegistar" class="btn-primary" onclick="registarDia()">Registar Saldo</button>
-    <button id="btnFecharDia" class="btn-lock" onclick="fecharDia()" style="display: none;">🔒 Fechar Dia</button>
-    
-    <div id="msgBloqueio" style="display:none; color: var(--warning); font-size: 0.8rem; text-align: center; border: 1px dashed var(--warning); padding: 10px; border-radius: 8px;">
-      Mercado fechado. Até amanhã!
+  <div id="bannerLimites"></div>
+
+  <!-- ------------------------- visão geral ------------------------ -->
+  <section class="view" id="vista-resumo">
+    <div class="stat-grid" id="cartoesResumo"></div>
+
+    <div class="card">
+      <div class="card-head">
+        <h3>Evolução da banca</h3>
+        <span class="hint" id="notaEvolucao"></span>
+      </div>
+      <div class="legend" id="legendaEvolucao"></div>
+      <div class="chart-box tall"><canvas id="graficoEvolucao"></canvas></div>
+      <div class="chart-empty hidden" id="graficoEvolucao-vazio"></div>
     </div>
 
-    <div style="margin-top: auto;">
-      <button class="btn-outline" onclick="toggleConfig()" style="width: 100%;">⚙️ Configurações</button>
+    <div class="chart-grid two">
+      <div class="card">
+        <div class="card-head">
+          <h3>Resultado diário</h3>
+          <span class="hint">Barras acima de zero = dia verde</span>
+        </div>
+        <div class="chart-box"><canvas id="graficoRoi"></canvas></div>
+        <div class="chart-empty hidden" id="graficoRoi-vazio"></div>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <h3>Drawdown</h3>
+          <span class="hint">Queda desde o máximo histórico</span>
+        </div>
+        <div class="chart-box"><canvas id="graficoDrawdown"></canvas></div>
+        <div class="chart-empty hidden" id="graficoDrawdown-vazio"></div>
+      </div>
     </div>
-  </aside>
+  </section>
 
-  <main>
-    <div class="top-bar">
-      <div class="stat-card">
-        <label>Banca Atual</label>
-        <span id="saldoAtual" class="val">—</span>
-        <div class="progress-wrapper">
-          <div class="progress-bg"><div id="progressBar" class="progress-fill"></div></div>
-          <div id="percConcluido" class="note" style="text-align: right; margin-top: 5px;">0% concluído</div>
+  <!-- -------------------------- registos -------------------------- -->
+  <section class="view hidden" id="vista-registos">
+    <div class="card">
+      <div class="card-head">
+        <h3>Adicionar ou corrigir um dia</h3>
+        <span class="hint">Registar duas vezes o mesmo dia substitui o valor</span>
+      </div>
+      <div class="form-grid">
+        <div class="field">
+          <label for="registoData">Data</label>
+          <input id="registoData" type="date" />
+        </div>
+        <div class="field">
+          <label for="registoValor">Saldo (€)</label>
+          <input id="registoValor" type="number" step="0.01" min="0" placeholder="0,00" />
+        </div>
+        <div class="field" style="grid-column: span 2">
+          <label for="registoNota">Nota (opcional)</label>
+          <input id="registoNota" type="text" maxlength="200" placeholder="Ex: dia de finais, stakes reduzidas" />
+        </div>
+        <button id="btnGuardarRegisto" class="btn-primary">Guardar</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h3>Histórico</h3>
+        <span class="hint" id="contagemRegistos"></span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Dia</th>
+              <th class="num">Saldo</th>
+              <th class="num">Lucro</th>
+              <th class="num">ROI</th>
+              <th class="num">Acumulado</th>
+              <th>Estado</th>
+              <th>Nota</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tabelaRegistos"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- -------------------------- apostas --------------------------- -->
+  <section class="view hidden" id="vista-apostas">
+    <div class="stat-grid" id="cartoesApostas"></div>
+
+    <div class="card">
+      <div class="card-head">
+        <h3>Nova aposta</h3>
+        <span class="hint">O lucro é calculado a partir da stake, odd e resultado</span>
+      </div>
+      <div class="form-grid">
+        <div class="field">
+          <label for="apostaData">Data</label>
+          <input id="apostaData" type="date" />
+        </div>
+        <div class="field" style="grid-column: span 2">
+          <label for="apostaDescricao">Descrição</label>
+          <input id="apostaDescricao" type="text" maxlength="200" placeholder="Ex: Benfica vs Porto — Over 2.5" />
+        </div>
+        <div class="field">
+          <label for="apostaDesporto">Desporto</label>
+          <input id="apostaDesporto" type="text" list="listaDesportos" maxlength="60" placeholder="Futebol" />
+        </div>
+        <div class="field">
+          <label for="apostaMercado">Mercado</label>
+          <input id="apostaMercado" type="text" list="listaMercados" maxlength="60" placeholder="Over/Under" />
+        </div>
+        <div class="field">
+          <label for="apostaTipster">Tipster / fonte</label>
+          <input id="apostaTipster" type="text" list="listaTipsters" maxlength="60" placeholder="Próprio" />
+        </div>
+        <div class="field">
+          <label for="apostaStake">Stake (€)</label>
+          <input id="apostaStake" type="number" step="0.01" min="0.01" placeholder="10,00" />
+        </div>
+        <div class="field">
+          <label for="apostaOdd">Odd</label>
+          <input id="apostaOdd" type="number" step="0.01" min="1" placeholder="1,85" />
+        </div>
+        <div class="field">
+          <label for="apostaResultado">Resultado</label>
+          <select id="apostaResultado">
+            <option value="pendente">Pendente</option>
+            <option value="green">Green</option>
+            <option value="red">Red</option>
+            <option value="meio-green">Meio green</option>
+            <option value="meio-red">Meio red</option>
+            <option value="anulada">Anulada</option>
+            <option value="cashout">Cashout</option>
+          </select>
+        </div>
+        <div class="field hidden" id="campoCashout">
+          <label for="apostaLucro">Lucro do cashout (€)</label>
+          <input id="apostaLucro" type="number" step="0.01" placeholder="Pode ser negativo" />
+        </div>
+        <button id="btnGuardarAposta" class="btn-primary">Adicionar</button>
+      </div>
+      <p class="help" id="sugestaoStake" style="margin-top: 12px"></p>
+      <datalist id="listaDesportos"></datalist>
+      <datalist id="listaMercados"></datalist>
+      <datalist id="listaTipsters"></datalist>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h3>Registo de apostas</h3>
+        <div class="filter-row">
+          <select id="filtroResultado" style="width: auto">
+            <option value="">Todos os resultados</option>
+            <option value="pendente">Pendentes</option>
+            <option value="green">Green</option>
+            <option value="red">Red</option>
+            <option value="meio-green">Meio green</option>
+            <option value="meio-red">Meio red</option>
+            <option value="anulada">Anuladas</option>
+            <option value="cashout">Cashout</option>
+          </select>
         </div>
       </div>
-      <div class="stat-card">
-        <label>ROI Hoje</label>
-        <span id="roiDia" class="val">—</span>
-        <div id="faltaHoje" class="note">A aguardar registo...</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Descrição</th>
+              <th>Mercado</th>
+              <th>Tipster</th>
+              <th class="num">Stake</th>
+              <th class="num">Odd</th>
+              <th>Resultado</th>
+              <th class="num">Lucro</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tabelaApostas"></tbody>
+        </table>
       </div>
-      <div class="stat-card">
-        <label>Crescimento Total</label>
-        <span id="crescimentoTotal" class="val">—</span>
-        <div id="notaObjetivo" class="note">—</div>
+    </div>
+  </section>
+
+  <!-- --------------------------- análise -------------------------- -->
+  <section class="view hidden" id="vista-analise">
+    <div class="stat-grid" id="cartoesAnalise"></div>
+
+    <div class="chart-grid two">
+      <div class="card">
+        <div class="card-head">
+          <h3>Distribuição de resultados</h3>
+          <span class="hint">Quantos dias caem em cada faixa de ROI</span>
+        </div>
+        <div class="chart-box"><canvas id="graficoDistribuicao"></canvas></div>
+        <div class="chart-empty hidden" id="graficoDistribuicao-vazio"></div>
       </div>
-      <div class="stat-card">
-        <label>Projeção Final</label>
-        <span id="previsaoDias" class="val" style="font-size: 1.1rem; line-height: 1.5; padding-top: 5px;">—</span>
-        <div id="alvoAmanha" class="note">A calcular...</div>
+      <div class="card">
+        <div class="card-head">
+          <h3>Lucro por dia da semana</h3>
+          <span class="hint">Onde é que ganhas mesmo dinheiro</span>
+        </div>
+        <div class="chart-box"><canvas id="graficoSemana"></canvas></div>
+        <div class="chart-empty hidden" id="graficoSemana-vazio"></div>
       </div>
     </div>
 
-    <div class="dashboard-grid">
-      <div class="chart-container">
-        <label style="margin-bottom: 15px; display: block;">Evolução vs Projeção (5 dias)</label>
-        <div style="flex: 1; position: relative;">
-          <canvas id="grafico"></canvas>
+    <div class="card">
+      <div class="card-head"><h3>Desempenho por mês</h3></div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Mês</th>
+              <th class="num">Dias</th>
+              <th class="num">Lucro</th>
+              <th class="num">ROI do mês</th>
+              <th class="num">Dias verdes</th>
+            </tr>
+          </thead>
+          <tbody id="tabelaMeses"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="chart-grid two">
+      <div class="card">
+        <div class="card-head">
+          <h3>Por tipster</h3>
+          <span class="hint">Só apostas resolvidas</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Tipster</th>
+                <th class="num">N</th>
+                <th class="num">Yield</th>
+                <th class="num">Lucro</th>
+              </tr>
+            </thead>
+            <tbody id="tabelaTipsters"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <h3>Por mercado</h3>
+          <span class="hint">Só apostas resolvidas</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Mercado</th>
+                <th class="num">N</th>
+                <th class="num">Yield</th>
+                <th class="num">Lucro</th>
+              </tr>
+            </thead>
+            <tbody id="tabelaMercados"></tbody>
+          </table>
         </div>
       </div>
     </div>
-  </main>
+  </section>
 
-  <script src="js/app.js"></script>
+  <!-- ---------------------------- risco --------------------------- -->
+  <section class="view hidden" id="vista-risco">
+    <div class="stat-grid" id="cartoesRisco"></div>
+
+    <div class="card">
+      <div class="card-head">
+        <h3>Projeção Monte Carlo</h3>
+        <span class="hint" id="notaMonteCarlo"></span>
+      </div>
+      <div class="legend" id="legendaMonteCarlo"></div>
+      <div class="chart-box tall"><canvas id="graficoMonteCarlo"></canvas></div>
+      <div class="chart-empty hidden" id="graficoMonteCarlo-vazio"></div>
+      <p class="help" style="margin-top: 12px">
+        Reamostra os teus resultados diários reais milhares de vezes em vez de assumir
+        que ganhas exatamente o ROI-alvo todos os dias. A banda mostra onde caem 80%
+        dos cenários — a linha do meio não é uma promessa, é apenas o cenário central.
+      </p>
+    </div>
+
+    <div class="chart-grid two">
+      <div class="card">
+        <div class="card-head">
+          <h3>Calculadora de Kelly</h3>
+          <span class="hint">Quanto apostar dada a tua estimativa</span>
+        </div>
+        <div class="form-grid">
+          <div class="field">
+            <label for="kellyOdd">Odd</label>
+            <input id="kellyOdd" type="number" step="0.01" min="1.01" value="2.00" />
+          </div>
+          <div class="field">
+            <label for="kellyProb">Probabilidade real (%)</label>
+            <input id="kellyProb" type="number" step="0.1" min="0.1" max="99.9" value="55" />
+          </div>
+          <div class="field">
+            <label for="kellyFracao">Fração de Kelly</label>
+            <select id="kellyFracao">
+              <option value="1">Kelly completo (1/1)</option>
+              <option value="0.5">Meio Kelly (1/2)</option>
+              <option value="0.25" selected>Quarto de Kelly (1/4)</option>
+              <option value="0.1">Décimo de Kelly (1/10)</option>
+            </select>
+          </div>
+        </div>
+        <div id="resultadoKelly" style="margin-top: 16px"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h3>Limites diários</h3>
+          <span class="hint">Travões para os dias maus</span>
+        </div>
+        <div class="form-grid">
+          <div class="field">
+            <label for="riscoStopLoss">Stop-loss diário (%)</label>
+            <input id="riscoStopLoss" type="number" step="0.5" min="0" max="100" />
+          </div>
+          <div class="field">
+            <label for="riscoStopWin">Stop-win diário (%)</label>
+            <input id="riscoStopWin" type="number" step="0.5" min="0" max="1000" />
+          </div>
+          <div class="field">
+            <label for="riscoUnidade">Unidade (% da banca)</label>
+            <input id="riscoUnidade" type="number" step="0.1" min="0.1" max="100" />
+          </div>
+          <button id="btnGuardarRisco" class="btn-primary">Guardar limites</button>
+        </div>
+        <div id="resumoRisco" style="margin-top: 16px"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------- metas --------------------------- -->
+  <section class="view hidden" id="vista-metas">
+    <div class="card">
+      <div class="card-head">
+        <h3>Novo objetivo</h3>
+        <span class="hint">Marcos intermédios até à meta final</span>
+      </div>
+      <div class="form-grid">
+        <div class="field" style="grid-column: span 2">
+          <label for="metaNome">Nome</label>
+          <input id="metaNome" type="text" maxlength="80" placeholder="Ex: Primeiros 500 €" />
+        </div>
+        <div class="field">
+          <label for="metaAlvo">Banca alvo (€)</label>
+          <input id="metaAlvo" type="number" step="1" min="1" placeholder="500" />
+        </div>
+        <div class="field">
+          <label for="metaPrazo">Prazo (opcional)</label>
+          <input id="metaPrazo" type="date" />
+        </div>
+        <button id="btnGuardarMeta" class="btn-primary">Criar objetivo</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h3>Objetivos</h3></div>
+      <div id="listaObjetivos"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h3>Conquistas</h3>
+        <span class="hint" id="contagemConquistas"></span>
+      </div>
+      <div class="achievements" id="listaConquistas"></div>
+    </div>
+  </section>
+
+  <!-- -------------------------- definições ------------------------ -->
+  <section class="view hidden" id="vista-definicoes">
+    <div class="card">
+      <div class="card-head">
+        <h3>Parâmetros da banca</h3>
+        <span class="hint">A base de todos os cálculos</span>
+      </div>
+      <div class="form-grid">
+        <div class="field">
+          <label for="cfgBancaInicial">Banca inicial (€)</label>
+          <input id="cfgBancaInicial" type="number" step="0.01" min="0" placeholder="100" />
+        </div>
+        <div class="field">
+          <label for="cfgMeta">Meta de banca (€)</label>
+          <input id="cfgMeta" type="number" step="1" min="0" placeholder="10000" />
+        </div>
+        <div class="field">
+          <label for="cfgRoi">ROI diário alvo (%)</label>
+          <input id="cfgRoi" type="number" step="0.1" min="-100" max="100" placeholder="5" />
+        </div>
+        <div class="field">
+          <label for="cfgMoeda">Moeda</label>
+          <select id="cfgMoeda">
+            <option value="EUR">EUR €</option>
+            <option value="USD">USD $</option>
+            <option value="GBP">GBP £</option>
+            <option value="BRL">BRL R$</option>
+          </select>
+        </div>
+        <button id="btnGuardarConfig" class="btn-primary">Guardar</button>
+      </div>
+      <p class="help" style="margin-top: 12px">
+        Alterar a banca inicial recalcula todo o histórico, porque o ROI de cada dia é
+        derivado do dia anterior.
+      </p>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h3>Dados</h3>
+        <span class="hint">Backup completo em JSON, ou CSV para folha de cálculo</span>
+      </div>
+      <div class="btn-row">
+        <button id="btnExportarJson" class="btn-ghost">⤓ Exportar backup (JSON)</button>
+        <button id="btnExportarCsv" class="btn-ghost">⤓ Exportar histórico (CSV)</button>
+        <button id="btnExportarApostasCsv" class="btn-ghost">⤓ Exportar apostas (CSV)</button>
+        <button id="btnImportar" class="btn-ghost">⤒ Importar backup</button>
+        <input id="ficheiroImportar" type="file" accept="application/json,.json" class="hidden" />
+      </div>
+    </div>
+
+    <div class="card" id="cartaoConta">
+      <div class="card-head"><h3>Conta</h3></div>
+      <div id="infoConta" class="help"></div>
+      <div class="btn-row" style="margin-top: 14px">
+        <button id="btnMudarSenha" class="btn-ghost">Mudar senha</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h3>Diagnóstico</h3></div>
+      <div id="infoDiagnostico" class="help">A verificar…</div>
+    </div>
+
+    <div class="card" style="border-color: color-mix(in srgb, var(--critical) 40%, transparent)">
+      <div class="card-head">
+        <h3>Zona de perigo</h3>
+        <span class="hint">Não há como desfazer</span>
+      </div>
+      <div class="btn-row">
+        <button id="btnApagarHistorico" class="btn-danger">Apagar histórico de dias</button>
+        <button id="btnResetTotal" class="btn-danger">Apagar tudo</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ========================== modais ========================== -->
+<div class="overlay" id="overlayLogin">
+  <div class="modal">
+    <h2>Entrar na conta</h2>
+    <p class="sub">Entra para sincronizares a banca entre dispositivos. Também podes continuar só neste browser.</p>
+    <div class="field">
+      <label for="loginUser">Utilizador</label>
+      <input id="loginUser" type="text" autocomplete="username" />
+    </div>
+    <div class="field">
+      <label for="loginPass">Senha</label>
+      <input id="loginPass" type="password" autocomplete="current-password" />
+    </div>
+    <div class="alert critical hidden" id="erroLogin"><span class="icon">✕</span><span></span></div>
+    <div class="btn-row">
+      <button id="btnEntrar" class="btn-primary" style="flex: 1">Entrar</button>
+      <button id="btnIrRegisto" class="btn-ghost" style="flex: 1">Criar conta</button>
+    </div>
+    <button id="btnModoLocal" class="btn-ghost btn-full">Continuar sem conta</button>
+  </div>
+</div>
+
+<div class="overlay" id="overlayRegisto">
+  <div class="modal">
+    <h2>Criar conta</h2>
+    <p class="sub">3-30 caracteres no nome. Senha com 8+ caracteres, maiúscula, minúscula, dígito e símbolo.</p>
+    <div class="field">
+      <label for="registoUser">Utilizador</label>
+      <input id="registoUser" type="text" autocomplete="username" />
+    </div>
+    <div class="field">
+      <label for="registoPass">Senha</label>
+      <input id="registoPass" type="password" autocomplete="new-password" />
+      <div class="strength" id="forcaSenha" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <span class="help" id="textoForcaSenha"></span>
+    </div>
+    <div class="field">
+      <label for="registoPass2">Confirmar senha</label>
+      <input id="registoPass2" type="password" autocomplete="new-password" />
+    </div>
+    <div class="alert critical hidden" id="erroRegisto"><span class="icon">✕</span><span></span></div>
+    <div class="btn-row">
+      <button id="btnCriarConta" class="btn-primary" style="flex: 1">Criar conta</button>
+      <button id="btnVoltarLogin" class="btn-ghost" style="flex: 1">Voltar</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlaySenha">
+  <div class="modal">
+    <h2>Mudar senha</h2>
+    <div class="field">
+      <label for="senhaAtual">Senha atual</label>
+      <input id="senhaAtual" type="password" autocomplete="current-password" />
+    </div>
+    <div class="field">
+      <label for="senhaNova">Nova senha</label>
+      <input id="senhaNova" type="password" autocomplete="new-password" />
+    </div>
+    <div class="alert critical hidden" id="erroSenha"><span class="icon">✕</span><span></span></div>
+    <div class="btn-row">
+      <button id="btnConfirmarSenha" class="btn-primary" style="flex: 1">Guardar</button>
+      <button id="btnCancelarSenha" class="btn-ghost" style="flex: 1">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlayBoasVindas">
+  <div class="modal">
+    <h2>Configura a tua banca</h2>
+    <p class="sub">Três números e o dashboard fica a funcionar.</p>
+    <div class="field">
+      <label for="bvBancaInicial">Banca inicial (€)</label>
+      <input id="bvBancaInicial" type="number" step="0.01" min="0" placeholder="100" />
+    </div>
+    <div class="field">
+      <label for="bvMeta">Meta de banca (€)</label>
+      <input id="bvMeta" type="number" step="1" min="0" value="1000" />
+    </div>
+    <div class="field">
+      <label for="bvRoi">ROI diário alvo (%)</label>
+      <input id="bvRoi" type="number" step="0.1" value="3" />
+      <span class="help">Realista: 1-3% ao dia já é excelente a longo prazo.</span>
+    </div>
+    <div class="alert critical hidden" id="erroBoasVindas"><span class="icon">✕</span><span></span></div>
+    <button id="btnGuardarBoasVindas" class="btn-primary btn-full">Começar</button>
+  </div>
+</div>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="js/analytics.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/api.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/app.js"></script>
 </body>
 </html>

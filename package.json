@@ -1,13 +1,19 @@
 {
   "name": "roi-tracker-vercel",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
+  "description": "Dashboard de gestão de banca: ROI diário, drawdown, análise de apostas, gestão de risco e projeções Monte Carlo.",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
-    "dev": "vercel dev"
+    "local": "node scripts/dev-local.js",
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
-    "jsonwebtoken": "^9.0.0",
+    "jsonwebtoken": "^9.0.2",
     "@vercel/edge-config": "^1.2.0"
   }
 }

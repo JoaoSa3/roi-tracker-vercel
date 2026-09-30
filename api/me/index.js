@@ -1,14 +1,31 @@
-const { verifyToken } = require("../../lib/auth");
-const { getUserById } = require("../../lib/db");
+"use strict";
 
-module.exports = async function handler(req, res) {
-  if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
-  
-  const payload = verifyToken(req.headers["authorization"]);
-  if (!payload) return res.status(401).json({ error: "Invalid token" });
-  
-  const row = await getUserById(payload.id);
-  if (!row) return res.status(404).json({ error: "Not found" });
-  
-  res.json({ id: row.id, username: row.username, createdAt: row.createdAt });
-};
+const db = require("../../lib/db");
+const store = require("../../lib/store");
+const { rota, erro } = require("../../lib/http");
+
+module.exports = rota({
+  auth: true,
+  GET: async ({ user }) => {
+    const linha = await db.getUserById(user.id);
+    if (!linha) throw erro(404, "Utilizador não encontrado");
+
+    const [historico, apostas] = await Promise.all([
+      db.getHistorico(user.id),
+      db.getApostas(user.id),
+    ]);
+
+    return {
+      id: linha.id,
+      username: linha.username,
+      createdAt: linha.createdAt,
+      ultimoLogin: linha.ultimoLogin,
+      numLogins: linha.numLogins || 0,
+      totais: { dias: historico.length, apostas: apostas.length },
+      armazenamento: {
+        driver: store.driverName(),
+        persistente: store.isPersistent(),
+      },
+    };
+  },
+});
