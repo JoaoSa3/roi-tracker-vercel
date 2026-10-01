@@ -473,6 +473,14 @@ a {
   );
 }
 
+.legend i.dotted {
+  background: repeating-linear-gradient(
+    90deg,
+    currentColor 0 2px,
+    transparent 2px 4px
+  );
+}
+
 .legend i.band {
   height: 11px;
   opacity: 0.35;

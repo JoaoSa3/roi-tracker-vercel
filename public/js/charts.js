@@ -18,6 +18,7 @@
 
   const cores = () => ({
     serie1: token("--series-1"),
+    serie2: token("--series-2"),
     bom: token("--good"),
     critico: token("--critical"),
     aviso: token("--warning"),
@@ -97,10 +98,14 @@
   }
 
   /* ---------------------------------------------------------------- *
-   * Evolução da banca + projeção Monte Carlo
+   * Evolução da banca + projeção: ritmo atual e ritmo alvo a juro
+   * composto, sobre a faixa de cenários do Monte Carlo
    * ---------------------------------------------------------------- */
 
-  function evolucao(idCanvas, { historico, simulacao, bancaInicial, meta, diasProjecao }) {
+  function evolucao(
+    idCanvas,
+    { historico, simulacao, bancaInicial, meta, diasProjecao, ritmoAtual, ritmoAlvo }
+  ) {
     const c = cores();
     const nProj = simulacao ? Math.min(simulacao.bandas.length, diasProjecao || 30) : 0;
 
@@ -121,6 +126,14 @@
         .concat([ultimoValor])
         .concat(simulacao.bandas.slice(0, nProj).map((b) => b[chave]));
     };
+
+    // Juro composto a uma taxa diária fixa (%), a partir do mesmo ponto.
+    const compor = (pct) =>
+      new Array(ultimoIndice)
+        .fill(null)
+        .concat(
+          Array.from({ length: nProj + 1 }, (_, d) => ultimoValor * Math.pow(1 + pct / 100, d))
+        );
 
     const datasets = [];
 
@@ -144,16 +157,33 @@
         tension: 0.3,
         order: 4,
       });
+    }
+
+    // A mediana do bootstrap e o ritmo composto real quase coincidem, por isso
+    // a linha central é o ritmo — o mesmo número que o cartão de projeção usa.
+    if (nProj && Number.isFinite(ritmoAtual)) {
       datasets.push({
-        label: "Projeção (mediana)",
-        data: projetar("p50"),
+        label: `Ritmo atual (${Fmt.pctSinal(ritmoAtual)}/dia)`,
+        data: compor(ritmoAtual),
         borderColor: c.serie1,
         borderWidth: 2,
         borderDash: [5, 4],
         pointRadius: 0,
         fill: false,
-        tension: 0.3,
         order: 2,
+      });
+    }
+
+    if (nProj && ritmoAlvo > 0) {
+      datasets.push({
+        label: `Ritmo alvo (${Fmt.pct(ritmoAlvo, 1)}/dia)`,
+        data: compor(ritmoAlvo),
+        borderColor: c.serie2,
+        borderWidth: 2,
+        borderDash: [2, 3],
+        pointRadius: 0,
+        fill: false,
+        order: 3,
       });
     }
 
