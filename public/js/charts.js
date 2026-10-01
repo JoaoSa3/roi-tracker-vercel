@@ -98,13 +98,23 @@
   }
 
   /* ---------------------------------------------------------------- *
-   * Evolução da banca + projeção: ritmo atual e ritmo alvo a juro
-   * composto, sobre a faixa de cenários do Monte Carlo
+   * Evolução da banca + três ritmos a juro composto: o atual e o alvo
+   * desde o primeiro dia, e o alvo a partir de hoje; por baixo, a faixa
+   * de cenários do Monte Carlo
    * ---------------------------------------------------------------- */
 
   function evolucao(
     idCanvas,
-    { historico, simulacao, bancaInicial, meta, diasProjecao, ritmoAtual, ritmoAlvo }
+    {
+      historico,
+      simulacao,
+      bancaInicial,
+      meta,
+      diasProjecao,
+      ritmoAtual,
+      ritmoAlvo,
+      diasAntes = 0,
+    }
   ) {
     const c = cores();
     const nProj = simulacao ? Math.min(simulacao.bandas.length, diasProjecao || 30) : 0;
@@ -127,7 +137,14 @@
         .concat(simulacao.bandas.slice(0, nProj).map((b) => b[chave]));
     };
 
-    // Juro composto a uma taxa diária fixa (%), a partir do mesmo ponto.
+    // Juro composto desde a banca inicial. O ponto i é o dia (diasAntes + i + 1)
+    // da vida da banca, por isso a curva não muda com o filtro de período.
+    const desdeInicio = (pct) =>
+      Array.from({ length: etiquetas.length }, (_, i) =>
+        bancaInicial * Math.pow(1 + pct / 100, diasAntes + i + 1)
+      );
+
+    // Juro composto a uma taxa diária fixa (%), a partir do último ponto real.
     const compor = (pct) =>
       new Array(ultimoIndice)
         .fill(null)
@@ -160,10 +177,11 @@
     }
 
     // O ritmo que a banca está mesmo a ter, seja ele qual for — mesmo negativo.
-    if (nProj && Number.isFinite(ritmoAtual)) {
+    // Composto desde o início, passa exatamente pelo saldo de hoje.
+    if (bancaInicial > 0 && Number.isFinite(ritmoAtual)) {
       datasets.push({
         label: `Ritmo atual (${Fmt.pctSinal(ritmoAtual)}/dia)`,
-        data: compor(ritmoAtual),
+        data: desdeInicio(ritmoAtual),
         borderColor: c.serie1,
         borderWidth: 2,
         borderDash: [5, 4],
@@ -173,9 +191,23 @@
       });
     }
 
+    // Onde estaria a banca se tivesse feito o alvo todos os dias desde o início.
+    if (bancaInicial > 0 && ritmoAlvo > 0) {
+      datasets.push({
+        label: `Alvo desde o início (${Fmt.pct(ritmoAlvo, 1)}/dia)`,
+        data: desdeInicio(ritmoAlvo),
+        borderColor: c.serie2,
+        borderWidth: 2,
+        borderDash: [5, 4],
+        pointRadius: 0,
+        fill: false,
+        order: 3,
+      });
+    }
+
     if (nProj && ritmoAlvo > 0) {
       datasets.push({
-        label: `Ritmo alvo (${Fmt.pct(ritmoAlvo, 1)}/dia)`,
+        label: `Alvo a partir de hoje (${Fmt.pct(ritmoAlvo, 1)}/dia)`,
         data: compor(ritmoAlvo),
         borderColor: c.serie2,
         borderWidth: 2,

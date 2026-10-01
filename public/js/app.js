@@ -418,13 +418,18 @@
       ? `
       <span><i style="background: var(--series-1)"></i> Banca real</span>
       ${
-        r.roiComposto !== null
+        r.roiComposto !== null && r.bancaInicial > 0
           ? `<span><i class="dashed" style="color: var(--series-1)"></i> Ritmo atual (${Fmt.pctSinal(r.roiComposto)}/dia)</span>`
           : ""
       }
       ${
-        r.roiAlvo > 0
-          ? `<span><i class="dotted" style="color: var(--series-2)"></i> Ritmo alvo (${Fmt.pct(r.roiAlvo, 1)}/dia)</span>`
+        r.roiAlvo > 0 && r.bancaInicial > 0
+          ? `<span><i class="dashed" style="color: var(--series-2)"></i> Alvo desde o início (${Fmt.pct(r.roiAlvo, 1)}/dia)</span>`
+          : ""
+      }
+      ${
+        r.roiAlvo > 0 && estado.simulacao
+          ? `<span><i class="dotted" style="color: var(--series-2)"></i> Alvo a partir de hoje (${Fmt.pct(r.roiAlvo, 1)}/dia)</span>`
           : ""
       }
       <span><i class="band" style="background: var(--series-1)"></i> Intervalo p10–p90</span>
@@ -446,6 +451,8 @@
         diasProjecao: 30,
         ritmoAtual: r.roiComposto,
         ritmoAlvo: r.roiAlvo,
+        // A janela é sempre o fim do histórico: os dias que ficam antes dela.
+        diasAntes: estado.preparado.length - estado.janela.length,
       });
     }
 
