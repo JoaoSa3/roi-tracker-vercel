@@ -1,7 +1,31 @@
-node_modules
+# Dependências
+node_modules/
+
+# Vercel
 .vercel
-*.sqlite
-.env.local
+
+# Variáveis de ambiente — NUNCA commitar
+.env
+.env.*
+!.env.example
+
+# Segredos e credenciais
+.api-token
+*.pem
+*.key
 find_auth*.js
 
-.api-token
+# Dados locais
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+npm-debug.log*
+
+# Sistema operativo / editores
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+*.swp
