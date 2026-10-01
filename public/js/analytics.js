@@ -13,6 +13,8 @@
 
   const MS_DIA = 86400000;
   const DIAS_ANO = 365;
+  // Abaixo disto o histórico é ruído: nem o bootstrap nem o ritmo real o usam.
+  const AMOSTRAS_MINIMAS = 5;
 
   /* ================================================================ *
    * Datas — sempre em hora local. Nunca `toISOString()` para um dia,
@@ -338,7 +340,7 @@
     if (!(valorInicial > 0)) return null;
 
     const rand = mulberry32(seed);
-    const usaBootstrap = retornos.length >= 5;
+    const usaBootstrap = retornos.length >= AMOSTRAS_MINIMAS;
     const mu = usaBootstrap ? media(retornos) : roiAlvo / 100;
     const sigma = usaBootstrap
       ? desvioPadrao(retornos)
@@ -410,6 +412,17 @@
     if (valorAtual >= meta) return { dias: 0, data: hoje(), concluido: true };
     const dias = Math.ceil(Math.log(meta / valorAtual) / Math.log(1 + taxa));
     return { dias, data: somarDias(hoje(), dias), concluido: false };
+  }
+
+  /**
+   * Ritmo real em fração: a taxa diária constante que leva da banca inicial à
+   * atual (média geométrica). É esta que se compõe numa projeção — compor a
+   * média aritmética sobrestima, porque +10% seguido de −10% não dá 0%.
+   */
+  function ritmoComposto(retornos) {
+    if (!retornos.length) return null;
+    const ritmo = Math.expm1(media(retornos.map(Math.log1p)));
+    return isFinite(ritmo) ? ritmo : null;
   }
 
   /* ================================================================ *
@@ -552,6 +565,7 @@
     const diasVermelhos = historico.filter((h) => h.lucro < 0).length;
     const volatilidade = desvioPadrao(retornos) * 100;
     const roiMedio = media(retornos) * 100;
+    const ritmo = ritmoComposto(retornos);
 
     // Sharpe anualizado (taxa sem risco = 0): retorno médio / volatilidade.
     const sharpe =
@@ -590,6 +604,7 @@
       taxaAcertoDias: historico.length ? (diasVerdes / historico.length) * 100 : 0,
       roiMedio,
       roiMediano: retornos.length ? mediana(retornos) * 100 : 0,
+      roiComposto: ritmo === null ? null : ritmo * 100,
       volatilidade,
       sharpe,
       sortino,
@@ -738,8 +753,10 @@
     porMes,
     histograma,
     // projeção
+    AMOSTRAS_MINIMAS,
     monteCarlo,
     projecao,
+    ritmoComposto,
     // apostas
     lucroAposta,
     apostaResolvida,

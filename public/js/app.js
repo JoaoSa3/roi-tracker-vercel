@@ -305,6 +305,23 @@
    * Vista: visão geral
    * ================================================================ */
 
+  /** Data de uma projeção — com o ano quando já não é este, senão "14/01" engana. */
+  function dataProjecao(dia) {
+    return dia.slice(0, 4) === A.hoje().slice(0, 4) ? Fmt.dataCurta(dia) : Fmt.dataLonga(dia);
+  }
+
+  /** Quando chegas à meta se continuares ao ritmo que a banca levou até hoje. */
+  function notaRitmoAtual(r) {
+    if (r.roiComposto === null || r.retornos.length < A.AMOSTRAS_MINIMAS) {
+      return `Ao ritmo atual: precisa de ${A.AMOSTRAS_MINIMAS} dias registados`;
+    }
+    const ritmo = `${Fmt.pctSinal(r.roiComposto)}/dia`;
+    const projecao = A.projecao(r.valorAtual, r.roiComposto, r.meta);
+    return projecao
+      ? `Ao ritmo atual (${ritmo}): ${dataProjecao(projecao.data)} · ${projecao.dias} dias`
+      : `Ao ritmo atual (<span class="neg">${ritmo}</span>) não chegas à meta`;
+  }
+
   function renderResumo() {
     const r = estado.resumo;
     const projecao = A.projecao(r.valorAtual, r.roiAlvo, r.meta);
@@ -314,9 +331,12 @@
       ? "Meta atingida"
       : r.meta <= 0
       ? "Define uma meta nas Definições"
-      : projecao
-      ? `${projecao.dias} dias ao ritmo alvo de ${Fmt.pct(r.roiAlvo, 1)}`
-      : "Define um ROI alvo positivo";
+      : [
+          projecao
+            ? `${projecao.dias} dias ao ritmo alvo de ${Fmt.pct(r.roiAlvo, 1)}`
+            : "Define um ROI alvo positivo",
+          notaRitmoAtual(r),
+        ].join("<br />");
 
     $("#cartoesResumo").innerHTML = [
       cartao({
@@ -355,7 +375,7 @@
         valor: metaAtingida
           ? "✓"
           : projecao && !projecao.concluido
-          ? Fmt.dataCurta(projecao.data)
+          ? dataProjecao(projecao.data)
           : "—",
         pequeno: true,
         nota: notaProjecao,
@@ -630,7 +650,9 @@
         label: "ROI médio diário",
         valor: Fmt.pctSinal(r.roiMedio),
         classe: sinalClasse(r.roiMedio),
-        nota: `Mediana ${Fmt.pctSinal(r.roiMediano)} · alvo ${Fmt.pct(r.roiAlvo, 1)}`,
+        nota: `Mediana ${Fmt.pctSinal(r.roiMediano)}${
+          r.roiComposto !== null ? ` · ritmo atual ${Fmt.pctSinal(r.roiComposto)}` : ""
+        } · alvo ${Fmt.pct(r.roiAlvo, 1)}`,
       }),
       cartao({
         label: "Volatilidade diária",
