@@ -13,8 +13,6 @@
 
   const MS_DIA = 86400000;
   const DIAS_ANO = 365;
-  // Abaixo disto o histórico é ruído: nem o bootstrap nem o ritmo real o usam.
-  const AMOSTRAS_MINIMAS = 5;
 
   /* ================================================================ *
    * Datas — sempre em hora local. Nunca `toISOString()` para um dia,
@@ -340,7 +338,7 @@
     if (!(valorInicial > 0)) return null;
 
     const rand = mulberry32(seed);
-    const usaBootstrap = retornos.length >= AMOSTRAS_MINIMAS;
+    const usaBootstrap = retornos.length >= 5;
     const mu = usaBootstrap ? media(retornos) : roiAlvo / 100;
     const sigma = usaBootstrap
       ? desvioPadrao(retornos)
@@ -753,7 +751,6 @@
     porMes,
     histograma,
     // projeção
-    AMOSTRAS_MINIMAS,
     monteCarlo,
     projecao,
     ritmoComposto,

@@ -98,13 +98,13 @@
   }
 
   /* ---------------------------------------------------------------- *
-   * Evolução da banca + projeção: ritmo mediano e ritmo alvo a juro
+   * Evolução da banca + projeção: ritmo atual e ritmo alvo a juro
    * composto, sobre a faixa de cenários do Monte Carlo
    * ---------------------------------------------------------------- */
 
   function evolucao(
     idCanvas,
-    { historico, simulacao, bancaInicial, meta, diasProjecao, ritmoMediano, ritmoAlvo }
+    { historico, simulacao, bancaInicial, meta, diasProjecao, ritmoAtual, ritmoAlvo }
   ) {
     const c = cores();
     const nProj = simulacao ? Math.min(simulacao.bandas.length, diasProjecao || 30) : 0;
@@ -159,11 +159,11 @@
       });
     }
 
-    // Um dia típico repetido: a mediana do ROI diário de todo o histórico.
-    if (nProj && Number.isFinite(ritmoMediano)) {
+    // O ritmo que a banca está mesmo a ter, seja ele qual for — mesmo negativo.
+    if (nProj && Number.isFinite(ritmoAtual)) {
       datasets.push({
-        label: `Ritmo mediano (${Fmt.pctSinal(ritmoMediano)}/dia)`,
-        data: compor(ritmoMediano),
+        label: `Ritmo atual (${Fmt.pctSinal(ritmoAtual)}/dia)`,
+        data: compor(ritmoAtual),
         borderColor: c.serie1,
         borderWidth: 2,
         borderDash: [5, 4],

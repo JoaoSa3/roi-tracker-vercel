@@ -310,21 +310,11 @@
     return dia.slice(0, 4) === A.hoje().slice(0, 4) ? Fmt.dataCurta(dia) : Fmt.dataLonga(dia);
   }
 
-  /** Ritmo diário real (%), ou null enquanto houver poucos dias para ser fiável. */
-  function ritmoAtual(r) {
-    return r.roiComposto !== null && r.retornos.length >= A.AMOSTRAS_MINIMAS
-      ? r.roiComposto
-      : null;
-  }
-
   /** Quando chegas à meta se continuares ao ritmo que a banca levou até hoje. */
   function notaRitmoAtual(r) {
-    const pct = ritmoAtual(r);
-    if (pct === null) {
-      return `Ao ritmo atual: precisa de ${A.AMOSTRAS_MINIMAS} dias registados`;
-    }
-    const ritmo = `${Fmt.pctSinal(pct)}/dia`;
-    const projecao = A.projecao(r.valorAtual, pct, r.meta);
+    if (r.roiComposto === null) return "Ao ritmo atual: ainda sem dias registados";
+    const ritmo = `${Fmt.pctSinal(r.roiComposto)}/dia`;
+    const projecao = A.projecao(r.valorAtual, r.roiComposto, r.meta);
     return projecao
       ? `Ao ritmo atual (${ritmo}): ${dataProjecao(projecao.data)} · ${projecao.dias} dias`
       : `Ao ritmo atual (<span class="neg">${ritmo}</span>) não chegas à meta`;
@@ -424,14 +414,12 @@
         }`
       : "";
 
-    // Mediana do ROI diário de todo o histórico, com o mesmo mínimo de dias do ritmo atual.
-    const mediano = r.retornos.length >= A.AMOSTRAS_MINIMAS ? r.roiMediano : null;
     $("#legendaEvolucao").innerHTML = temDados
       ? `
       <span><i style="background: var(--series-1)"></i> Banca real</span>
       ${
-        mediano !== null
-          ? `<span><i class="dashed" style="color: var(--series-1)"></i> Ritmo mediano (${Fmt.pctSinal(mediano)}/dia)</span>`
+        r.roiComposto !== null
+          ? `<span><i class="dashed" style="color: var(--series-1)"></i> Ritmo atual (${Fmt.pctSinal(r.roiComposto)}/dia)</span>`
           : ""
       }
       ${
@@ -456,7 +444,7 @@
         bancaInicial: r.bancaInicial,
         meta: r.meta,
         diasProjecao: 30,
-        ritmoMediano: mediano,
+        ritmoAtual: r.roiComposto,
         ritmoAlvo: r.roiAlvo,
       });
     }

@@ -43,9 +43,7 @@ module.exports = rota({
       limites: A.estadoLimites(r, cfg),
       projecaoDeterministica: A.projecao(r.valorAtual, r.roiAlvo, r.meta),
       projecaoRitmoAtual:
-        r.roiComposto !== null && r.retornos.length >= A.AMOSTRAS_MINIMAS
-          ? A.projecao(r.valorAtual, r.roiComposto, r.meta)
-          : null,
+        r.roiComposto !== null ? A.projecao(r.valorAtual, r.roiComposto, r.meta) : null,
       simulacao,
       porDiaDaSemana: A.porDiaDaSemana(r.historico),
       porMes: A.porMes(r.historico),
