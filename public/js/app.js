@@ -424,13 +424,14 @@
         }`
       : "";
 
-    const ritmo = ritmoAtual(r);
+    // Mediana do ROI diário de todo o histórico, com o mesmo mínimo de dias do ritmo atual.
+    const mediano = r.retornos.length >= A.AMOSTRAS_MINIMAS ? r.roiMediano : null;
     $("#legendaEvolucao").innerHTML = temDados
       ? `
       <span><i style="background: var(--series-1)"></i> Banca real</span>
       ${
-        ritmo !== null
-          ? `<span><i class="dashed" style="color: var(--series-1)"></i> Ritmo atual (${Fmt.pctSinal(ritmo)}/dia)</span>`
+        mediano !== null
+          ? `<span><i class="dashed" style="color: var(--series-1)"></i> Ritmo mediano (${Fmt.pctSinal(mediano)}/dia)</span>`
           : ""
       }
       ${
@@ -455,7 +456,7 @@
         bancaInicial: r.bancaInicial,
         meta: r.meta,
         diasProjecao: 30,
-        ritmoAtual: ritmo,
+        ritmoMediano: mediano,
         ritmoAlvo: r.roiAlvo,
       });
     }

@@ -98,13 +98,13 @@
   }
 
   /* ---------------------------------------------------------------- *
-   * Evolução da banca + projeção: ritmo atual e ritmo alvo a juro
+   * Evolução da banca + projeção: ritmo mediano e ritmo alvo a juro
    * composto, sobre a faixa de cenários do Monte Carlo
    * ---------------------------------------------------------------- */
 
   function evolucao(
     idCanvas,
-    { historico, simulacao, bancaInicial, meta, diasProjecao, ritmoAtual, ritmoAlvo }
+    { historico, simulacao, bancaInicial, meta, diasProjecao, ritmoMediano, ritmoAlvo }
   ) {
     const c = cores();
     const nProj = simulacao ? Math.min(simulacao.bandas.length, diasProjecao || 30) : 0;
@@ -159,12 +159,11 @@
       });
     }
 
-    // A mediana do bootstrap e o ritmo composto real quase coincidem, por isso
-    // a linha central é o ritmo — o mesmo número que o cartão de projeção usa.
-    if (nProj && Number.isFinite(ritmoAtual)) {
+    // Um dia típico repetido: a mediana do ROI diário de todo o histórico.
+    if (nProj && Number.isFinite(ritmoMediano)) {
       datasets.push({
-        label: `Ritmo atual (${Fmt.pctSinal(ritmoAtual)}/dia)`,
-        data: compor(ritmoAtual),
+        label: `Ritmo mediano (${Fmt.pctSinal(ritmoMediano)}/dia)`,
+        data: compor(ritmoMediano),
         borderColor: c.serie1,
         borderWidth: 2,
         borderDash: [5, 4],
