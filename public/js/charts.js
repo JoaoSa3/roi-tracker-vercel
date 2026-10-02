@@ -83,6 +83,13 @@
     return (ctx) => (ctx.tick && ctx.tick.value === 0 ? c.eixo : c.grelha);
   }
 
+  /** Arredonda para cima até um valor "redondo" (1, 1,5, 2, 2,5, 3, 4, 5, 6, 8 × 10ⁿ). */
+  function tetoRedondo(x) {
+    const ordem = Math.pow(10, Math.floor(Math.log10(x)));
+    const passo = [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10].find((n) => n * ordem >= x);
+    return passo * ordem;
+  }
+
   function render(idCanvas, configuracao) {
     const canvas = document.getElementById(idCanvas);
     if (!canvas) return null;
@@ -261,6 +268,17 @@
       },
     };
     opcoes.scales.y.ticks.callback = (v) => Fmt.moedaCurta(v);
+
+    // As projeções não mandam na escala. Com poucos dias o ritmo atual pode
+    // ser absurdo (+200%/dia) e achatava a banca real contra o zero; assim o
+    // eixo cobre a banca e a meta, e o que passar disso sai por cima.
+    const maiorReal = Math.max(bancaInicial || 0, ...real);
+    if (maiorReal > 0) {
+      opcoes.scales.y.min = 0;
+      opcoes.scales.y.max = tetoRedondo(Math.max(maiorReal * 1.5, meta > 0 ? meta * 1.1 : 0));
+      // Sem isto o Chart.js mete um rótulo no topo fora do passo (… 1,4 k · 1,5 k).
+      opcoes.scales.y.ticks.includeBounds = false;
+    }
 
     return render(idCanvas, { type: "line", data: { labels: etiquetas, datasets }, options: opcoes });
   }
